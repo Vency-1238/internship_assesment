@@ -20,10 +20,9 @@ from database import QueryRepository
 from models import (
     APIErrorResponse,
     QueryCreateRequest,
-    QueryCreateResponse,
-    QueryRecordResponse,
+    QueryResponse,
 )
-from services.llm_service import ClaudeExtractionService, ExtractionServiceError
+from services.llm_service import ExtractionServiceError, GroqExtractionService
 
 
 load_dotenv()
@@ -38,13 +37,16 @@ FRONTEND_ORIGINS = [
     if origin.strip()
 ]
 
+ALLOWED_METHODS = ["GET", "POST"]
+ALLOWED_HEADERS = ["Content-Type", "Authorization"]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     repository = QueryRepository(DATABASE_PATH)
     await repository.initialize()
     app.state.repository = repository
-    app.state.llm_service = ClaudeExtractionService.from_environment()
+    app.state.llm_service = GroqExtractionService.from_environment()
     yield
     await repository.close()
 
@@ -59,9 +61,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONTEND_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_credentials=False,
+    allow_methods=ALLOWED_METHODS,
+    allow_headers=ALLOWED_HEADERS,
 )
 
 
@@ -75,7 +77,7 @@ def get_repository() -> QueryRepository:
     return repository
 
 
-def get_llm_service() -> ClaudeExtractionService:
+def get_llm_service() -> GroqExtractionService:
     llm_service = app.state.llm_service
     if llm_service is None:
         raise RuntimeError("LLM service is not initialized")
@@ -89,9 +91,13 @@ async def root() -> FileResponse:
     return FileResponse(INDEX_HTML)
 
 
+def _to_http_error(exc: Exception) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+
+
 @app.post(
     "/queries",
-    response_model=QueryCreateResponse,
+    response_model=QueryResponse,
     responses={
         400: {"model": APIErrorResponse},
         502: {"model": APIErrorResponse},
@@ -99,23 +105,14 @@ async def root() -> FileResponse:
     },
     status_code=status.HTTP_201_CREATED,
 )
-async def create_query(request: QueryCreateRequest) -> QueryCreateResponse:
-    if not request.query.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="query must not be empty",
-        )
-
+async def create_query(request: QueryCreateRequest) -> QueryResponse:
     repository = get_repository()
     llm_service = get_llm_service()
 
     try:
         extracted_data = await llm_service.extract_query_intent(request.query)
     except ExtractionServiceError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
-        ) from exc
+        raise _to_http_error(exc) from exc
     except Exception as exc:  # pragma: no cover - defensive boundary
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -123,15 +120,15 @@ async def create_query(request: QueryCreateRequest) -> QueryCreateResponse:
         ) from exc
 
     record = await repository.create_query(request.query, extracted_data)
-    return QueryCreateResponse.from_record(record)
+    return QueryResponse.from_record(record)
 
 
 @app.get(
     "/queries/{query_id}",
-    response_model=QueryRecordResponse,
+    response_model=QueryResponse,
     responses={404: {"model": APIErrorResponse}},
 )
-async def get_query(query_id: str) -> QueryRecordResponse:
+async def get_query(query_id: str) -> QueryResponse:
     repository = get_repository()
     record = await repository.get_query(query_id)
     if record is None:
@@ -139,7 +136,7 @@ async def get_query(query_id: str) -> QueryRecordResponse:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"query '{query_id}' not found",
         )
-    return QueryRecordResponse.from_record(record)
+    return QueryResponse.from_record(record)
 
 
 @app.get("/health")

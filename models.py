@@ -38,15 +38,9 @@ class QueryRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class QueryCreateResponse(QueryRecord):
+class QueryResponse(QueryRecord):
     @classmethod
-    def from_record(cls, record: QueryRecord) -> "QueryCreateResponse":
-        return cls.model_validate(record.model_dump())
-
-
-class QueryRecordResponse(QueryRecord):
-    @classmethod
-    def from_record(cls, record: QueryRecord) -> "QueryRecordResponse":
+    def from_record(cls, record: QueryRecord) -> "QueryResponse":
         return cls.model_validate(record.model_dump())
 
 

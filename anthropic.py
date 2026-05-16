@@ -68,6 +68,10 @@ class _MessagesAPI:
                 data = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             error_body = exc.read().decode("utf-8", errors="replace")
+            if exc.code == 401:
+                raise AnthropicError(
+                    "Anthropic authentication failed with 401 Unauthorized. Check that ANTHROPIC_API_KEY is a valid Claude API key, not a placeholder or revoked key."
+                ) from exc
             raise AnthropicError(f"Anthropic API request failed: {exc.code} {error_body}") from exc
         except Exception as exc:  # pragma: no cover - network boundary
             raise AnthropicError(f"Anthropic API request failed: {exc}") from exc

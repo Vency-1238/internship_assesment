@@ -1,6 +1,6 @@
-"""Claude extraction service.
+"""Groq extraction service.
 
-The service is intentionally strict: Claude must return JSON only, and the
+The service is intentionally strict: the model must return JSON only, and the
 result is validated before the API persists it. This avoids quietly storing
 unstructured model output.
 """
@@ -12,7 +12,7 @@ import json
 import os
 from dataclasses import dataclass
 
-import anthropic
+import groq
 from pydantic import ValidationError
 
 from models import StructuredQueryData, structured_data_from_json
@@ -44,54 +44,57 @@ Rules:
 
 
 @dataclass(slots=True)
-class ClaudeExtractionService:
-    client: anthropic.Anthropic
+class GroqExtractionService:
+    client: groq.Groq
     model: str
 
     @classmethod
-    def from_environment(cls) -> "ClaudeExtractionService":
-        api_key = os.getenv("ANTHROPIC_API_KEY")
+    def from_environment(cls) -> "GroqExtractionService":
+        api_key = os.getenv("GROQ_API_KEY", os.getenv("ANTHROPIC_API_KEY", "")).strip()
         if not api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY is not configured")
-        model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
-        return cls(client=anthropic.Anthropic(api_key=api_key), model=model)
+            raise RuntimeError("GROQ_API_KEY is not configured")
+        if api_key == "sk-your-key-here" or "your-key-here" in api_key:
+            raise RuntimeError(
+                "GROQ_API_KEY is still a placeholder. Replace it with a real Groq API key in .env."
+            )
+        model = os.getenv("GROQ_MODEL", os.getenv("ANTHROPIC_MODEL", "llama-3.1-8b-instant"))
+        return cls(client=groq.Groq(api_key=api_key), model=model)
 
     async def extract_query_intent(self, query: str) -> StructuredQueryData:
         try:
             response = await asyncio.to_thread(
-                self.client.messages.create,
+                self.client.chat.completions.create,
                 model=self.model,
                 max_tokens=300,
                 temperature=0,
-                system=SYSTEM_PROMPT,
                 messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
                     {
                         "role": "user",
                         "content": (
                             "Extract the structured research intent from this query:\n"
                             f"{query}"
                         ),
-                    }
+                    },
                 ],
+                response_format={"type": "json_object"},
             )
         except Exception as exc:  # pragma: no cover - network/API boundary
-            raise ExtractionServiceError(f"Claude API request failed: {exc}") from exc
+            raise ExtractionServiceError(f"Groq API request failed: {exc}") from exc
 
-        content = "".join(
-            block.text for block in response.content if getattr(block, "type", None) == "text"
-        ).strip()
+        content = response.choices[0].message.content.strip() if response.choices else ""
         if not content:
-            raise ExtractionServiceError("Claude returned an empty response")
+            raise ExtractionServiceError("Groq returned an empty response")
 
         try:
             parsed = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise ExtractionServiceError("Claude returned invalid JSON") from exc
+            raise ExtractionServiceError("Groq returned invalid JSON") from exc
 
         if not isinstance(parsed, dict):
-            raise ExtractionServiceError("Claude response must be a JSON object")
+            raise ExtractionServiceError("Groq response must be a JSON object")
 
         try:
             return structured_data_from_json(parsed)
         except ValidationError as exc:
-            raise ExtractionServiceError(f"Claude JSON did not match schema: {exc}") from exc
+            raise ExtractionServiceError(f"Groq JSON did not match schema: {exc}") from exc
