@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Research Query Platform</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+    :root {
+      color-scheme: dark;
+      --bg: #07111e;
+      --bg-soft: #0d1727;
+      --panel: rgba(14, 22, 38, 0.84);
+      --panel-border: rgba(148, 163, 184, 0.22);
+      --text: #f5f8ff;
+      --muted: #9fb0c8;
+      --accent: #7dd3fc;
+      --accent-strong: #38bdf8;
+      --good: #5eead4;
+      --bad: #fda4af;
+      --shadow: 0 26px 70px rgba(0, 0, 0, 0.48);
+      --radius: 24px;
+      --radius-sm: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.20), transparent 28%),
+        radial-gradient(circle at 85% 18%, rgba(94, 234, 212, 0.12), transparent 26%),
+        radial-gradient(circle at 50% 100%, rgba(125, 211, 252, 0.08), transparent 28%),
+        linear-gradient(180deg, #050b14 0%, #07101c 36%, #04070d 100%);
+    }
+
+    .wrap {
+      width: min(1220px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+      padding: 14px 18px;
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(125, 211, 252, 0.96), rgba(94, 234, 212, 0.9));
+      color: #04111f;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      flex: 0 0 auto;
+    }
+
+    .brand-copy {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .brand-copy strong {
+      font-family: "Space Grotesk", Inter, sans-serif;
+      font-size: 0.96rem;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-copy span {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .api-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(94, 234, 212, 0.24);
+      border-radius: 999px;
+      background: rgba(4, 10, 18, 0.58);
+      color: var(--good);
+      font-size: 0.86rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .api-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--good);
+      box-shadow: 0 0 0 6px rgba(94, 234, 212, 0.12);
+    }
+
+    .hero {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 8px 12px;
+      border: 1px solid rgba(125, 211, 252, 0.22);
+      border-radius: 999px;
+      color: #c6f0ff;
+      background: rgba(125, 211, 252, 0.08);
+      backdrop-filter: blur(12px);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 5vw, 4.6rem);
+      line-height: 0.92;
+      letter-spacing: -0.07em;
+      max-width: 11ch;
+      font-family: "Space Grotesk", Inter, sans-serif;
+    }
+
+    .subtitle {
+      max-width: 72ch;
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.04rem;
+      line-height: 1.65;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 10px 0 2px;
+    }
+
+    .stat {
+      padding: 14px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      position: relative;
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(125, 211, 252, 0.10), transparent 38%);
+      pointer-events: none;
+    }
+
+    .panel-body {
+      position: relative;
+      padding: 24px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+      font-family: "Space Grotesk", Inter, sans-serif;
+    }
+
+    .panel-subtitle {
+      margin: -4px 0 18px;
+      color: var(--muted);
+      font-size: 0.93rem;
+      line-height: 1.5;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    textarea, input {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 14px;
+      background: rgba(7, 14, 25, 0.72);
+      color: var(--text);
+      padding: 14px 15px;
+      font: inherit;
+      outline: none;
+      transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    textarea:focus, input:focus {
+      border-color: rgba(125, 211, 252, 0.7);
+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+    }
+
+    .query-shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 4px 0 18px;
+    }
+
+    .chip {
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .chip:hover {
+      border-color: rgba(125, 211, 252, 0.4);
+      background: rgba(125, 211, 252, 0.08);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font: inherit;
+      font-weight: 700;
+      color: #03111e;
+      background: linear-gradient(135deg, var(--accent), var(--good));
+      cursor: pointer;
+      transition: transform 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
+    }
+
+    button:hover { transform: translateY(-1px); filter: brightness(1.04); }
+    button:disabled { opacity: 0.6; cursor: wait; transform: none; }
+
+    .ghost {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+    }
+
+    .result {
+      display: grid;
+      gap: 14px;
+    }
+
+    .status {
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status.ok { color: var(--good); }
+    .status.err { color: var(--bad); }
+
+    pre {
+      margin: 0;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      background: rgba(4, 10, 18, 0.86);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: #dbeafe;
+      overflow: auto;
+      min-height: 210px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .empty-state {
+      color: #8ea3c3;
+      font-size: 0.94rem;
+      line-height: 1.6;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+
+    .card span {
+      display: block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .card strong {
+      font-size: 0.98rem;
+      font-weight: 650;
+      word-break: break-word;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .meta { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+      .topbar { border-radius: 22px; align-items: flex-start; flex-direction: column; }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { width: min(100% - 20px, 1220px); padding-top: 16px; }
+      .panel-body { padding: 18px; }
+      h1 { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">RQ</div>
+        <div class="brand-copy">
+          <strong>Research Query Studio</strong>
+          <span>FastAPI + Claude + SQLite</span>
+        </div>
+      </div>
+      <div class="api-pill"><span class="api-dot"></span> Backend live on /queries</div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">AI Research Query Platform</div>
+      <h1>Turn plain language into structured research.</h1>
+      <p class="subtitle">
+        Submit a query, let Claude extract the research intent, then retrieve the stored record by ID.
+        This page is served by the FastAPI backend, so the frontend and API run on the same origin.
+      </p>
+      <div class="stats">
+        <div class="stat"><span>Endpoint</span><strong>POST /queries</strong></div>
+        <div class="stat"><span>Lookup</span><strong>GET /queries/{id}</strong></div>
+        <div class="stat"><span>Persistence</span><strong>SQLite records</strong></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-body">
+          <h2>Create Query</h2>
+          <p class="panel-subtitle">Type a natural-language request. The backend will extract structured fields and save them with a UUID.</p>
+          <div class="query-shortcuts" aria-label="Quick examples">
+            <button class="chip" type="button" data-query="find AI startups in Europe">AI startups in Europe</button>
+            <button class="chip" type="button" data-query="list fintech companies in Singapore">Fintech in Singapore</button>
+            <button class="chip" type="button" data-query="research healthcare AI vendors in North America">Healthcare AI vendors</button>
+          </div>
+          <div class="field">
+            <label for="queryInput">Natural-language query</label>
+            <textarea id="queryInput" placeholder="Example: find AI startups in Europe"></textarea>
+          </div>
+          <div class="actions">
+            <button id="submitBtn" type="button">Extract and Save</button>
+            <button id="fillExampleBtn" class="ghost" type="button">Use Example</button>
+          </div>
+          <div id="submitStatus" class="status" aria-live="polite"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-body result">
+          <div>
+            <h2>Lookup by ID</h2>
+            <p class="panel-subtitle">Paste a saved UUID to retrieve the original query and Claude-generated structured data.</p>
+            <div class="field">
+              <label for="idInput">Query ID</label>
+              <input id="idInput" placeholder="Paste a UUID here" />
+            </div>
+            <div class="actions">
+              <button id="lookupBtn" type="button">Fetch Query</button>
+            </div>
+            <div id="lookupStatus" class="status" aria-live="polite"></div>
+          </div>
+
+          <div class="meta">
+            <div class="card">
+              <span>Stored ID</span>
+              <strong id="recordId">-</strong>
+            </div>
+            <div class="card">
+              <span>Created At</span>
+              <strong id="recordCreatedAt">-</strong>
+            </div>
+          </div>
+
+          <div class="card">
+            <span>Original Query</span>
+            <strong id="recordQuery">-</strong>
+          </div>
+
+          <div class="card">
+            <span>Structured Data</span>
+            <pre id="recordData" class="empty-state">No record loaded yet. Save a query or fetch one by ID to see the extracted JSON here.</pre>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="footer-note">
+      Open the API docs at <strong>/docs</strong> or use this page to exercise the production-style frontend flow.
+    </div>
+  </main>
+
+  <script>
+    const queryInput = document.getElementById('queryInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const fillExampleBtn = document.getElementById('fillExampleBtn');
+    const submitStatus = document.getElementById('submitStatus');
+    const sampleButtons = document.querySelectorAll('[data-query]');
+
+    const idInput = document.getElementById('idInput');
+    const lookupBtn = document.getElementById('lookupBtn');
+    const lookupStatus = document.getElementById('lookupStatus');
+
+    const recordId = document.getElementById('recordId');
+    const recordCreatedAt = document.getElementById('recordCreatedAt');
+    const recordQuery = document.getElementById('recordQuery');
+    const recordData = document.getElementById('recordData');
+
+    const exampleQuery = 'find AI startups in Europe';
+
+    function setStatus(node, message, kind = '') {
+      node.textContent = message;
+      node.className = `status ${kind}`.trim();
+    }
+
+    function setRecord(record) {
+      recordId.textContent = record?.id ?? '-';
+      recordCreatedAt.textContent = record?.created_at ?? '-';
+      recordQuery.textContent = record?.query ?? '-';
+      recordData.textContent = JSON.stringify(record?.structured_data ?? {}, null, 2);
+      recordData.classList.toggle('empty-state', !record);
+      if (record?.id) {
+        idInput.value = record.id;
+      }
+    }
+
+    async function parseError(response) {
+      try {
+        const payload = await response.json();
+        return payload.detail || JSON.stringify(payload);
+      } catch {
+        return `Request failed with status ${response.status}`;
+      }
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      const query = queryInput.value.trim();
+      if (!query) {
+        setStatus(submitStatus, 'Enter a query first.', 'err');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setStatus(submitStatus, 'Processing query...', '');
+
+      try {
+        const response = await fetch('/queries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query })
+        });
+
+        if (!response.ok) {
+          throw new Error(await parseError(response));
+        }
+
+        const record = await response.json();
+        setRecord(record);
+        setStatus(submitStatus, `Saved query ${record.id}`, 'ok');
+      } catch (error) {
+        setStatus(submitStatus, error.message, 'err');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    lookupBtn.addEventListener('click', async () => {
+      const id = idInput.value.trim();
+      if (!id) {
+        setStatus(lookupStatus, 'Enter a query ID first.', 'err');
+        return;
+      }
+
+      lookupBtn.disabled = true;
+      setStatus(lookupStatus, 'Fetching record...', '');
+
+      try {
+        const response = await fetch(`/queries/${encodeURIComponent(id)}`);
+        if (!response.ok) {
+          throw new Error(await parseError(response));
+        }
+
+        const record = await response.json();
+        setRecord(record);
+        setStatus(lookupStatus, `Loaded query ${record.id}`, 'ok');
+      } catch (error) {
+        setStatus(lookupStatus, error.message, 'err');
+      } finally {
+        lookupBtn.disabled = false;
+      }
+    });
+
+    fillExampleBtn.addEventListener('click', () => {
+      queryInput.value = exampleQuery;
+      queryInput.focus();
+      setStatus(submitStatus, 'Example loaded. Submit it to create a record.', '');
+    });
+
+    sampleButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        queryInput.value = button.dataset.query || '';
+        queryInput.focus();
+        setStatus(submitStatus, 'Example loaded from a quick query chip.', '');
+      });
+    });
+
+    setRecord(null);
+  </script>
+</body>
+</html>
